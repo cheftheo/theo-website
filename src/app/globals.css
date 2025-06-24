@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-body {
+/* body {
   overflow: hidden;
-}
+} */
 
 * {
   user-select: none;
