@@ -52,6 +52,7 @@ export default function Home() {
               <li>Monitoring</li>
               <li>Documentation</li>
               <li>Collaboration</li>
+              <li>testt????</li>
             </ul>
           </div>  
         </section>
