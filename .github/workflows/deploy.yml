@@ -10,17 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
       - name: Set environment variables and install global packages
         run: |
           echo "!!!!! NODE_ENV = development !!!!!"
-          apt install -y git
-          apt install -y nodejs
-          apt install -y npm
-          npm install -g pm2
-
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
+          sudo apt install -y git
+          sudo apt install -y nodejs
+          sudo apt install -y npm
+          sudo npm install -g pm2
+      
       - name: Fetch Dev branch
         run: git fetch origin dev
 
