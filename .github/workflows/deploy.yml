@@ -29,26 +29,26 @@ jobs:
             set -e
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
-            # Update packages
+            # Update packages needed
             sudo yum update -y
 
-            # Install Git if missing
+            # Install git if missing
             if ! command -v git &> /dev/null; then
               sudo yum install -y git
             fi
 
-            # Install Node.js
+            # Install Nodejs
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo yum install -y nodejs
             fi
 
-            # Install PM2
+            # Install pm2
             if ! command -v pm2 &> /dev/null; then
               sudo npm install -g pm2
             fi
 
-            # Create app directory
+            # Create app dirs
             mkdir -p /home/ec2-user/theo-website
             cd /home/ec2-user/theo-website
 
@@ -65,6 +65,6 @@ jobs:
             npm install
             npm run build
 
-            pm2 restart theo-app || pm2 start npm --name "theo-app" -- start
+            sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 80
             pm2 save
           EOF
