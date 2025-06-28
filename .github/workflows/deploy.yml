@@ -27,50 +27,47 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
-
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
             # Update packages
             sudo yum update -y
 
-            # Install Git if not present
+            # Install Git if missing
             if ! command -v git &> /dev/null; then
               sudo yum install -y git
             fi
 
-            # Install Node.js (NodeSource for Node 18)
+            # Install Node.js
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo yum install -y nodejs
             fi
 
-            # Install PM2 globally
+            # Install PM2
             if ! command -v pm2 &> /dev/null; then
               sudo npm install -g pm2
             fi
+
+            # Add GitHub to known hosts
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
             # Create app directory
             mkdir -p /home/ec2-user/theo-website
             cd /home/ec2-user/theo-website
 
-            # Clone repo if not already cloned
+            # Clone repo if needed
             if [ ! -d ".git" ]; then
-              git clone https://github.com/yourusername/theo-website.git .
+              git clone git@github.com:yourusername/theo-website.git .
             fi
 
-            # Mark as safe directory
             git config --global --add safe.directory /home/ec2-user/theo-website
-
-            # Fetch and checkout latest code
             git fetch origin dev
             git checkout dev
             git pull origin dev
 
-            # Install dependencies & build
             npm install
             npm run build
 
-            # Restart with PM2
             pm2 restart theo-app || pm2 start npm --name "theo-app" -- start
             pm2 save
           EOF
