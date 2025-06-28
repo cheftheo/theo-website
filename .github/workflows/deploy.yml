@@ -48,16 +48,13 @@ jobs:
               sudo npm install -g pm2
             fi
 
-            # Add GitHub to known hosts
-            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-
             # Create app directory
             mkdir -p /home/ec2-user/theo-website
             cd /home/ec2-user/theo-website
 
             # Clone repo if needed
             if [ ! -d ".git" ]; then
-              git clone git@github.com:yourusername/theo-website.git .
+              git clone https://github.com/yourusername/theo-website.git .
             fi
 
             git config --global --add safe.directory /home/ec2-user/theo-website
