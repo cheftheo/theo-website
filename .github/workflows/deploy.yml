@@ -1,61 +1,76 @@
-name: deploy webste to AWS EC2
+name: Deploy website to AWS EC2
 
 on:
   push:
     branches:
-      - dev 
+      - dev
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      
       - name: Checkout repository
         uses: actions/checkout@v3
-      
-      - name: Set environment variables and install global packages
-        run: |
-          echo "!!!!! NODE_ENV = development !!!!!"
-          sudo apt install -y git
-          sudo apt install -y nodejs
-          sudo apt install -y npm
-          sudo npm install -g pm2
-      
-      - name: Fetch Dev branch
-        run: git fetch origin dev
 
-      - name: set the SSH key
+      - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-      - name: add known_hosts
+      - name: Add EC2 to known_hosts
         run: |
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: deploy
+      - name: Deploy to EC2
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
-            # Mark directory as safe for git (fixes "dubious ownership" error)
-            git config --global --add safe.directory /home/ec2-user/theo-website
+            # Update packages
+            sudo yum update -y
 
-            # Go to app directory
+            # Install Git if not present
+            if ! command -v git &> /dev/null; then
+              sudo yum install -y git
+            fi
+
+            # Install Node.js (NodeSource for Node 18)
+            if ! command -v node &> /dev/null; then
+              curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+              sudo yum install -y nodejs
+            fi
+
+            # Install PM2 globally
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # Create app directory
+            mkdir -p /home/ec2-user/theo-website
             cd /home/ec2-user/theo-website
 
-            # Fix ownership and permissions just in case
-            sudo chown -R ec2-user:ec2-user /home/ec2-user/theo-website
-            chmod -R u+rwX /home/ec2-user/theo-website
+            # Clone repo if not already cloned
+            if [ ! -d ".git" ]; then
+              git clone https://github.com/yourusername/theo-website.git .
+            fi
 
-            # Pull, install, build and restart with PM2
+            # Mark as safe directory
+            git config --global --add safe.directory /home/ec2-user/theo-website
+
+            # Fetch and checkout latest code
+            git fetch origin dev
+            git checkout dev
             git pull origin dev
+
+            # Install dependencies & build
             npm install
             npm run build
+
+            # Restart with PM2
             pm2 restart theo-app || pm2 start npm --name "theo-app" -- start
             pm2 save
           EOF
