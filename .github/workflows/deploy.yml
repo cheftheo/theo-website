@@ -54,7 +54,7 @@ jobs:
 
             # Clone repo if needed
             if [ ! -d ".git" ]; then
-              git clone https://github.com/yourusername/theo-website.git .
+              git clone https://github.com/cheftheo/theo-website.git .
             fi
 
             git config --global --add safe.directory /home/ec2-user/theo-website
