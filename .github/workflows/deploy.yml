@@ -29,26 +29,38 @@ jobs:
             set -e
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
-            # Update packages needed
+            # Update system
             sudo yum update -y
 
-            # Install git if missing
+            # Install Git
             if ! command -v git &> /dev/null; then
               sudo yum install -y git
             fi
 
-            # Install Nodejs
+            # Install Node.js
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo yum install -y nodejs
             fi
 
-            # Install pm2
+            # Install PM2
             if ! command -v pm2 &> /dev/null; then
               sudo npm install -g pm2
             fi
 
-            # Create app dirs
+            # Install Nginx
+            if ! command -v nginx &> /dev/null; then
+              sudo amazon-linux-extras install nginx1 -y
+              sudo systemctl enable nginx
+              sudo systemctl start nginx
+            fi
+
+            # Install Certbot
+            if ! command -v certbot &> /dev/null; then
+              sudo yum install -y certbot python3-certbot-nginx
+            fi
+
+            # Setup app directory
             mkdir -p /home/ec2-user/theo-website
             cd /home/ec2-user/theo-website
 
@@ -65,6 +77,34 @@ jobs:
             npm install
             npm run build
 
-            sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 80
-            pm2 save
+            # Start app on port 3000 (non-privileged)
+            sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 3000
+            sudo pm2 save
+
+            # Configure Nginx reverse proxy
+            sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
+
+            server {
+                listen 80;
+                server_name your-domain.com www.your-domain.com;
+
+                location / {
+                    proxy_pass http://127.0.0.1:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_set_header Host \$host;
+                    proxy_cache_bypass \$http_upgrade;
+                }
+              }
+            EOL
+
+            # Restart Nginx
+            sudo nginx -t && sudo systemctl reload nginx
+
+            # Setup SSL with Certbot (Let’s Encrypt)
+            sudo certbot --nginx --non-interactive --agree-tos --redirect -m marascu.theodor@gmail.com -d your-domain.com -d www.your-domain.com
+
+            # Setup automatic renewal
+            echo "0 3 * * * root certbot renew --quiet" | sudo tee -a /etc/crontab
           EOF
