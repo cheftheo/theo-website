@@ -10,6 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Set environment variables and install global packages
+        run: |
+          echo "NODE_ENV=production" >> $GITHUB_ENV
+          npm install -g pm2
+          npm install -g git 
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
