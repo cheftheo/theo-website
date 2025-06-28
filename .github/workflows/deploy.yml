@@ -30,17 +30,17 @@ jobs:
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
             # Update system
-            sudo yum update -y
+            sudo dnf update -y
 
             # Install Git
             if ! command -v git &> /dev/null; then
-              sudo yum install -y git
+              sudo dnf install -y git
             fi
 
             # Install Node.js
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-              sudo yum install -y nodejs
+              sudo dnf install -y nodejs
             fi
 
             # Install PM2
@@ -57,7 +57,7 @@ jobs:
 
             # Install Certbot
             if ! command -v certbot &> /dev/null; then
-              sudo yum install -y certbot python3-certbot-nginx
+              sudo dnf install -y certbot python3-certbot-nginx
             fi
 
             # Setup app directory
@@ -77,16 +77,15 @@ jobs:
             npm install
             npm run build
 
-            # Start app on port 3000 (non-privileged)
+            # Start app on port 3000
             sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 3000
             sudo pm2 save
 
             # Configure Nginx reverse proxy
             sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
-
             server {
                 listen 80;
-                server_name your-domain.com www.your-domain.com;
+                server_name theo-network.online www.theo-network.online;
 
                 location / {
                     proxy_pass http://127.0.0.1:3000;
@@ -96,15 +95,16 @@ jobs:
                     proxy_set_header Host \$host;
                     proxy_cache_bypass \$http_upgrade;
                 }
-              }
+            }
             EOL
 
             # Restart Nginx
-            sudo nginx -t && sudo systemctl reload nginx
+            sudo nginx -t
+            sudo systemctl restart nginx
 
-            # Setup SSL with Certbot (Let’s Encrypt)
-            sudo certbot --nginx --non-interactive --agree-tos --redirect -m marascu.theodor@gmail.com -d your-domain.com -d www.your-domain.com
+            # Setup SSL with Certbot
+            sudo certbot --nginx --non-interactive --agree-tos --redirect -m your-email@example.com -d theo-network.online -d www.theo-network.online
 
-            # Setup automatic renewal
+            # Setup auto-renew
             echo "0 3 * * * root certbot renew --quiet" | sudo tee -a /etc/crontab
           EOF
