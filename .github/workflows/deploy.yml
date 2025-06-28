@@ -50,7 +50,7 @@ jobs:
 
             # Install Nginx
             if ! command -v nginx &> /dev/null; then
-              sudo amazon-linux-extras install nginx1 -y
+              sudo dnf install -y nginx
               sudo systemctl enable nginx
               sudo systemctl start nginx
             fi
