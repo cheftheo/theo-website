@@ -29,69 +29,63 @@ jobs:
             set -e
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
+            # Install required packages
             sudo dnf update -y
+            sudo dnf install -y git nginx certbot python3-certbot-nginx
 
-            if ! command -v git &> /dev/null; then
-              sudo dnf install -y git
-            fi
-
+            # Install Node.js
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo dnf install -y nodejs
             fi
 
-            if ! command -v pm2 &> /dev/null; then
-              sudo npm install -g pm2
+            # Install PM2
+            sudo npm install -g pm2
+
+            # Clone or update repo
+            APP_DIR="/home/ec2-user/theo-website"
+            if [ ! -d "$APP_DIR" ]; then
+              git clone https://github.com/cheftheo/theo-website.git "$APP_DIR"
             fi
 
-            if ! command -v nginx &> /dev/null; then
-              sudo dnf install -y nginx
-              sudo systemctl enable nginx
-              sudo systemctl start nginx
-            fi
-
-            if ! command -v certbot &> /dev/null; then
-              sudo dnf install -y certbot python3-certbot-nginx
-            fi
-
-            mkdir -p /home/ec2-user/theo-website
-            cd /home/ec2-user/theo-website
-
-            if [ ! -d ".git" ]; then
-              git clone https://github.com/cheftheo/theo-website.git .
-            fi
-
-            git config --global --add safe.directory /home/ec2-user/theo-website
+            cd "$APP_DIR"
             git fetch origin dev
             git checkout dev
             git pull origin dev
 
+            # Install dependencies and build
             npm install
             npm run build
 
-            sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 80
+            # Restart or start app with PM2 on port 3000
+            sudo pm2 start npm --name "theo-app" -- start -- -p 3000 || sudo pm2 restart theo-app
             sudo pm2 save
 
+            # Configure Nginx
             sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
             server {
-              listen 80;
-              server_name theo-network.online www.theo-network.online;
+                listen 80;
+                server_name theo-network.online www.theo-network.online;
 
-              location / {
-                proxy_pass http://127.0.0.1:3000;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-              }
+                location / {
+                    proxy_pass http://127.0.0.1:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_set_header Host \$host;
+                    proxy_cache_bypass \$http_upgrade;
+                }
             }
             EOL
 
             sudo nginx -t
-            sudo systemctl restart nginx
+            sudo systemctl reload nginx
 
+            # Obtain or renew SSL certificate
             sudo certbot --nginx --non-interactive --agree-tos --redirect -m marascu.theodor@example.com -d theo-network.online -d www.theo-network.online
 
-            echo "0 3 * * * root certbot renew --quiet" | sudo tee -a /etc/crontab
+            # Add automatic renewal cron job
+            if ! grep -q "certbot renew" /etc/crontab; then
+              echo "0 3 * * * root certbot renew --quiet && systemctl reload nginx" | sudo tee -a /etc/crontab
+            fi
           EOF
