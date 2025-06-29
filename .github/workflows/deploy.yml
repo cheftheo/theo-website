@@ -27,13 +27,16 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
+
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
-            # Install required packages
+            # Update packages
             sudo dnf update -y
+
+            # Install necessary packages
             sudo dnf install -y git nginx certbot python3-certbot-nginx
 
-            # Install Node.js
+            # Install Node.js if not already present
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo dnf install -y nodejs
@@ -42,7 +45,7 @@ jobs:
             # Install PM2
             sudo npm install -g pm2
 
-            # Clone or update repo
+            # Clone or update repository
             APP_DIR="/home/ec2-user/theo-website"
             if [ ! -d "$APP_DIR" ]; then
               git clone https://github.com/cheftheo/theo-website.git "$APP_DIR"
@@ -57,12 +60,12 @@ jobs:
             npm install
             npm run build
 
-            # Restart or start app with PM2 on port 3000
+            # Start or restart app on port 3000
             sudo pm2 start npm --name "theo-app" -- start -- -p 3000 || sudo pm2 restart theo-app
             sudo pm2 save
 
-            # Configure Nginx
-            sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
+            # Write clean Nginx config
+            sudo bash -c 'cat > /etc/nginx/conf.d/theo.conf' << 'EOL'
             server {
               listen 80;
               server_name theo-network.online www.theo-network.online;
@@ -70,20 +73,23 @@ jobs:
               location / {
                 proxy_pass http://127.0.0.1:3000;
                 proxy_http_version 1.1;
-                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection "upgrade";
-                proxy_set_header Host \$host;
-                proxy_cache_bypass \$http_upgrade;
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
               }
             }
+            EOL
 
+            # Test and reload Nginx
             sudo nginx -t
-            sudo systemctl reload nginx
+            sudo systemctl enable nginx
+            sudo systemctl restart nginx
 
             # Obtain or renew SSL certificate
             sudo certbot --nginx --non-interactive --agree-tos --redirect -m marascu.theodor@example.com -d theo-network.online -d www.theo-network.online
 
-            # Add automatic renewal cron job
+            # Add renewal cron job if not already present
             if ! grep -q "certbot renew" /etc/crontab; then
               echo "0 3 * * * root certbot renew --quiet && systemctl reload nginx" | sudo tee -a /etc/crontab
             fi
