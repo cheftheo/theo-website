@@ -64,19 +64,18 @@ jobs:
             # Configure Nginx
             sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
             server {
-                listen 80;
-                server_name theo-network.online www.theo-network.online;
+              listen 80;
+              server_name theo-network.online www.theo-network.online;
 
-                location / {
-                    proxy_pass http://127.0.0.1:3000;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection "upgrade";
-                    proxy_set_header Host \$host;
-                    proxy_cache_bypass \$http_upgrade;
-                }
+              location / {
+                proxy_pass http://127.0.0.1:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host \$host;
+                proxy_cache_bypass \$http_upgrade;
+              }
             }
-            EOL
 
             sudo nginx -t
             sudo systemctl reload nginx
