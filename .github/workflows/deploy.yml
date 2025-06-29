@@ -74,26 +74,16 @@ jobs:
 
             sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
             server {
-                listen 80;
-                server_name theo-network.online www.theo-network.online;
-                return 301 https://$host$request_uri;
-              }
+              listen 80;
+              server_name theo-network.online www.theo-network.online;
 
-              server {
-                listen 443 ssl;
-                server_name theo-network.online www.theo-network.online;
-
-                ssl_certificate /etc/letsencrypt/live/theo-network.online/fullchain.pem;
-                ssl_certificate_key /etc/letsencrypt/live/theo-network.online/privkey.pem;
-
-                location / {
-                  proxy_pass http://127.0.0.1:80;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_cache_bypass $http_upgrade;
-                }
+              location / {
+                proxy_pass http://127.0.0.1:3000;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_cache_bypass $http_upgrade;
               }
             }
             EOL
