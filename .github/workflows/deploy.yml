@@ -64,22 +64,22 @@ jobs:
             sudo pm2 start npm --name "theo-app" -- start -- -p 3000 || sudo pm2 restart theo-app
             sudo pm2 save
 
-            # Write clean Nginx config
-            sudo bash -c 'cat > /etc/nginx/conf.d/theo.conf' << 'EOL'
+            # Write a clean Nginx config
+            sudo bash -c 'cat <<EOF2 > /etc/nginx/conf.d/theo.conf
             server {
-              listen 80;
-              server_name theo-network.online www.theo-network.online;
+                listen 80;
+                server_name theo-network.online www.theo-network.online;
 
-              location / {
-                proxy_pass http://127.0.0.1:3000;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_set_header Host $host;
-                proxy_cache_bypass $http_upgrade;
-              }
+                location / {
+                    proxy_pass http://127.0.0.1:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_set_header Host \$host;
+                    proxy_cache_bypass \$http_upgrade;
+                }
             }
-            EOL
+            EOF2'
 
             # Test and reload Nginx
             sudo nginx -t
