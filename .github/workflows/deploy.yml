@@ -36,7 +36,7 @@ jobs:
             # Install necessary packages
             sudo dnf install -y git nginx certbot python3-certbot-nginx
 
-            # Install Node.js if not already present
+            # Install Node.js if not present
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo dnf install -y nodejs
@@ -60,26 +60,30 @@ jobs:
             npm install
             npm run build
 
-            # Start or restart app on port 3000
-            sudo pm2 start npm --name "theo-app" -- start -- -p 3000 || sudo pm2 restart theo-app
+            # Stop and delete existing PM2 app if exists
+            sudo pm2 stop theo-app || true
+            sudo pm2 delete theo-app || true
+
+            # Start new instance on port 3000
+            sudo pm2 start npm --name "theo-app" -- start -- -p 3000
             sudo pm2 save
 
-            # Write a clean Nginx config
+            # Write clean Nginx config
             sudo bash -c 'cat <<EOF2 > /etc/nginx/conf.d/theo.conf
-            server {
-                listen 80;
-                server_name theo-network.online www.theo-network.online;
+server {
+    listen 80;
+    server_name theo-network.online www.theo-network.online;
 
-                location / {
-                    proxy_pass http://127.0.0.1:3000;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection "upgrade";
-                    proxy_set_header Host \$host;
-                    proxy_cache_bypass \$http_upgrade;
-                }
-            }
-            EOF2'
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOF2'
 
             # Test and reload Nginx
             sudo nginx -t
