@@ -78,7 +78,7 @@ jobs:
             npm run build
 
             # Start app on port 3000
-            sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 3000
+            sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 80
             sudo pm2 save
 
             # Configure Nginx reverse proxy
@@ -88,7 +88,7 @@ jobs:
                 server_name theo-network.online www.theo-network.online;
 
                 location / {
-                    proxy_pass http://127.0.0.1:3000;
+                    proxy_pass http://127.0.0.1:80;
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade \$http_upgrade;
                     proxy_set_header Connection 'upgrade';
