@@ -70,20 +70,20 @@ jobs:
 
             # Write clean Nginx config
             sudo bash -c 'cat <<EOF2 > /etc/nginx/conf.d/theo.conf
-server {
-    listen 80;
-    server_name theo-network.online www.theo-network.online;
+            server {
+                listen 80;
+                server_name theo-network.online www.theo-network.online;
 
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}
-EOF2'
+                location / {
+                    proxy_pass http://127.0.0.1:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade \$http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_set_header Host \$host;
+                    proxy_cache_bypass \$http_upgrade;
+                }
+            }
+            EOF2'
 
             # Test and reload Nginx
             sudo nginx -t
