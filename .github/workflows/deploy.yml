@@ -29,42 +29,34 @@ jobs:
             set -e
             export PATH=$PATH:/usr/local/bin:/usr/bin
 
-            # Update system
             sudo dnf update -y
 
-            # Install Git
             if ! command -v git &> /dev/null; then
               sudo dnf install -y git
             fi
 
-            # Install Node.js
             if ! command -v node &> /dev/null; then
               curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
               sudo dnf install -y nodejs
             fi
 
-            # Install PM2
             if ! command -v pm2 &> /dev/null; then
               sudo npm install -g pm2
             fi
 
-            # Install Nginx
             if ! command -v nginx &> /dev/null; then
               sudo dnf install -y nginx
               sudo systemctl enable nginx
               sudo systemctl start nginx
             fi
 
-            # Install Certbot
             if ! command -v certbot &> /dev/null; then
               sudo dnf install -y certbot python3-certbot-nginx
             fi
 
-            # Setup app directory
             mkdir -p /home/ec2-user/theo-website
             cd /home/ec2-user/theo-website
 
-            # Clone repo if needed
             if [ ! -d ".git" ]; then
               git clone https://github.com/cheftheo/theo-website.git .
             fi
@@ -77,34 +69,39 @@ jobs:
             npm install
             npm run build
 
-            # Start app on port 3000
             sudo pm2 restart theo-app || sudo pm2 start npm --name "theo-app" -- start -- -p 80
             sudo pm2 save
 
-            # Configure Nginx reverse proxy
             sudo tee /etc/nginx/conf.d/theo.conf > /dev/null <<EOL
             server {
                 listen 80;
                 server_name theo-network.online www.theo-network.online;
+                return 301 https://$host$request_uri;
+              }
+
+              server {
+                listen 443 ssl;
+                server_name theo-network.online www.theo-network.online;
+
+                ssl_certificate /etc/letsencrypt/live/theo-network.online/fullchain.pem;
+                ssl_certificate_key /etc/letsencrypt/live/theo-network.online/privkey.pem;
 
                 location / {
-                    proxy_pass http://127.0.0.1:80;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade \$http_upgrade;
-                    proxy_set_header Connection 'upgrade';
-                    proxy_set_header Host \$host;
-                    proxy_cache_bypass \$http_upgrade;
+                  proxy_pass http://127.0.0.1:80;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
                 }
+              }
             }
             EOL
 
-            # Restart Nginx
             sudo nginx -t
             sudo systemctl restart nginx
 
-            # Setup SSL with Certbot
             sudo certbot --nginx --non-interactive --agree-tos --redirect -m marascu.theodor@example.com -d theo-network.online -d www.theo-network.online
 
-            # Setup auto-renew
             echo "0 3 * * * root certbot renew --quiet" | sudo tee -a /etc/crontab
           EOF
