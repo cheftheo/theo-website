@@ -5,7 +5,6 @@ import { faLocationDot } from '@fortawesome/free-solid-svg-icons';
 export const MainCard = () => {
     const prop1 = "Tech Engineer who loves innovation"
 
-
     return (
         <div className="bg-zinc-800 p-6 rounded-lg shadow-md flex flex-col justify-center items-start gap-4">
           <div className="gap-2 font-bold text-2xl">
@@ -19,7 +18,8 @@ export const MainCard = () => {
             <span className='text-neutral-100 text-sm font-semibold'>Bucharest</span>
           </div>
 
-          <button className="p-1 px-3 border border-solid rounded-xl text-neutral-400 items-end self-end hover:text-neutral-100 transition-all ">Contact me</button>
+          {/* <button className="p-1 px-3 border border-solid rounded-xl text-neutral-400 items-end self-end hover:text-neutral-100 transition-all ">Contact me</button> */}
+          <span className='mt-10 text-sm p-1 px-3 border border-solid rounded-xl text-neutral-400 hover:text-indigo-200 transition-all'>For business: marascu.theodor@gmail.com</span>
         </div>
     );
 }

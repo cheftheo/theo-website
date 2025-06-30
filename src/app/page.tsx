@@ -3,7 +3,7 @@ import { WhatIdo } from '@/components/whatido';
 import { WorkExp } from '@/components/workexp';
 import { Desc } from '@/components/desc';
 import { MainCard } from '@/components/maincard';
-
+import { Whatsthat } from '@/components/whatsthat';
 
 export default function Home() {
   return (
@@ -12,9 +12,9 @@ export default function Home() {
         <MainCard />
         <SocialsPage />
         <Desc />
+        <Whatsthat />
         <WhatIdo />
         <WorkExp />
-
       </section>
     </main>
   );

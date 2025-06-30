@@ -24,6 +24,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+
+       <meta name="description" content="I'm Theo, a wannabe engineer. Explore my portfolio, projects, and experience." />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://theo-network.online/" />
+
+        <meta property="og:title" content="Theo's network Name — Portfolio" />
+        <meta property="og:description" content="I'm Theo, a wannabe engineer. Check out my work." />
+        <meta property="og:url" content="https://theo-network.online/" />
+
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-stone-900`}>
         {children}
       </body>
