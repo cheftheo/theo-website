@@ -29,7 +29,8 @@ export default function RootLayout({
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://theo-network.online/" />
 
-        <meta property="og:title" content="Theo's network Name — Portfolio" />
+        <meta name="author" content="Theodor Marascu" />
+        <meta property="og:title" content="Theo's network" />
         <meta property="og:description" content="I'm Theo, a wannabe engineer. Check out my work." />
         <meta property="og:url" content="https://theo-network.online/" />
 

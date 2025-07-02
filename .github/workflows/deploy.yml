@@ -30,49 +30,38 @@ jobs:
 
           export PATH=$PATH:/usr/local/bin:/usr/bin
 
-          # Update packages
           sudo dnf update -y
 
-          # Install necessary packages
           sudo dnf install -y git nginx certbot python3-certbot-nginx
 
-          # Install Node.js if not present
           if ! command -v node &> /dev/null; then
             curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
             sudo dnf install -y nodejs
           fi
 
-          # Install PM2
           sudo npm install -g pm2
 
-          # App directory
           APP_DIR="/home/ec2-user/theo-website"
 
-          # Clone or update repository
           if [ ! -d "$APP_DIR" ]; then
             git clone https://github.com/cheftheo/theo-website.git "$APP_DIR"
           fi
 
           cd "$APP_DIR"
 
-          # Reset local changes and pull latest
           git fetch origin dev
           git checkout dev
           git reset --hard origin/dev
 
-          # Install dependencies and build
           npm install
           npm run build
 
-          # Stop and delete existing PM2 app if exists
           sudo pm2 stop theo-app || true
           sudo pm2 delete theo-app || true
 
-          # Start new instance on port 3000
           sudo pm2 start npm --name "theo-app" -- start -- -p 3000
           sudo pm2 save
 
-          # Write Nginx config
           sudo bash -c "cat > /etc/nginx/conf.d/theo.conf << 'EOF_NGINX'
           server {
               listen 80;
