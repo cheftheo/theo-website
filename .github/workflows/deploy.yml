@@ -45,16 +45,20 @@ jobs:
           # Install PM2
           sudo npm install -g pm2
 
-          # Clone or update repository
+          # App directory
           APP_DIR="/home/ec2-user/theo-website"
+
+          # Clone or update repository
           if [ ! -d "$APP_DIR" ]; then
             git clone https://github.com/cheftheo/theo-website.git "$APP_DIR"
           fi
 
           cd "$APP_DIR"
+
+          # Reset local changes and pull latest
           git fetch origin dev
           git checkout dev
-          git pull origin dev
+          git reset --hard origin/dev
 
           # Install dependencies and build
           npm install
@@ -68,7 +72,7 @@ jobs:
           sudo pm2 start npm --name "theo-app" -- start -- -p 3000
           sudo pm2 save
 
-          # Write clean Nginx config
+          # Write Nginx config
           sudo bash -c "cat > /etc/nginx/conf.d/theo.conf << 'EOF_NGINX'
           server {
               listen 80;
@@ -97,4 +101,5 @@ jobs:
           if ! grep -q "certbot renew" /etc/crontab; then
             echo "0 3 * * * root certbot renew --quiet && systemctl reload nginx" | sudo tee -a /etc/crontab
           fi
+
           EOF
