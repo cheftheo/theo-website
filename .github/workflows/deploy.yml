@@ -1,4 +1,4 @@
-name: Deploy website to AWS EC2
+name: Deploy with Docker
 
 on:
   push:
@@ -7,88 +7,29 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up SSH key
+      - name: Build Docker Image
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          docker build -t theo-app .
 
-      - name: Add EC2 to known_hosts
+      - name: Stop and Remove Old Container
         run: |
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          docker stop theo-app || true
+          docker rm theo-app || true
 
-      - name: Deploy to EC2
+      - name: Run New Container
         run: |
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-          set -e
+          docker run -d \
+            --name theo-app \
+            --restart always \
+            -p 3000:3000 \
+            theo-app
 
-          export PATH=$PATH:/usr/local/bin:/usr/bin
-
-          sudo dnf update -y
-
-          sudo dnf install -y git nginx certbot python3-certbot-nginx
-
-          if ! command -v node &> /dev/null; then
-            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-            sudo dnf install -y nodejs
-          fi
-
-          sudo npm install -g pm2
-
-          APP_DIR="/home/ec2-user/theo-website"
-
-          if [ ! -d "$APP_DIR" ]; then
-            git clone https://github.com/cheftheo/theo-website.git "$APP_DIR"
-          fi
-
-          cd "$APP_DIR"
-
-          git fetch origin dev
-          git checkout dev
-          git reset --hard origin/dev
-
-          npm install
-          npm run build
-
-          sudo pm2 stop theo-app || true
-          sudo pm2 delete theo-app || true
-
-          sudo pm2 start npm --name "theo-app" -- start -- -p 3000
-          sudo pm2 save
-
-          sudo bash -c "cat > /etc/nginx/conf.d/theo.conf << 'EOF_NGINX'
-          server {
-              listen 80;
-              server_name theo-network.online www.theo-network.online;
-
-              location / {
-                  proxy_pass http://127.0.0.1:3000;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade \$http_upgrade;
-                  proxy_set_header Connection \"upgrade\";
-                  proxy_set_header Host \$host;
-                  proxy_cache_bypass \$http_upgrade;
-              }
-          }
-          EOF_NGINX"
-
-          # Test and reload Nginx
-          sudo nginx -t
-          sudo systemctl enable nginx
-          sudo systemctl restart nginx
-
-          # Obtain or renew SSL certificate
-          sudo certbot --nginx --non-interactive --agree-tos --redirect -m marascu.theodor@gmail.com -d theo-network.online -d www.theo-network.online
-
-          # Add renewal cron job if not already present
-          if ! grep -q "certbot renew" /etc/crontab; then
-            echo "0 3 * * * root certbot renew --quiet && systemctl reload nginx" | sudo tee -a /etc/crontab
-          fi
-
-          EOF
+      - name: Prune Old Images
+        run: |
+          docker image prune -f
